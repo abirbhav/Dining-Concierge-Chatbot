@@ -7,7 +7,7 @@ import requests
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-num_messages_to_get = 1
+num_messages_to_get = 10
 
 def send_email(message, email):
     logger.info('sending email')
@@ -20,12 +20,11 @@ def send_email(message, email):
         ],
         'CcAddresses': [
             'abirbhavdutta@gmail.com'
-            'tanutanurhcp@gmail.com',
         ]
     },
     Message={
         'Subject': {
-            'Data': 'Your dining suggestions. Enjoy'
+            'Data': 'Your dining suggestions'
         },
         'Body': {
             'Text': {
@@ -130,9 +129,9 @@ def lambda_handler(event, context):
 
         
         # c) Finally, delete message from SQS
-        # receipt_handle = message['ReceiptHandle']
-        # sqs_response = sqs.delete_message(QueueUrl = sqs_url, ReceiptHandle = receipt_handle)
-        # logger.info(f'Response from sqs for deleting {receipt_handle} is {sqs_response}')
+        receipt_handle = message['ReceiptHandle']
+        sqs_response = sqs.delete_message(QueueUrl = sqs_url, ReceiptHandle = receipt_handle)
+        logger.info(f'Response from sqs for deleting {receipt_handle} is {sqs_response}')
         
     return {
         'statusCode': 200,
