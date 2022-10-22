@@ -3,7 +3,6 @@ import boto3
 import logging
 import os
 
-import os
   
 BOT_NAME = os.environ['BOT_NAME']
 BOT_ALIAS = os.environ['BOT_ALIAS']

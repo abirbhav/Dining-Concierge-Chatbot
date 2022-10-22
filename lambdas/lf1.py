@@ -4,6 +4,7 @@ import datetime
 import time
 import os
 import logging
+import re
 
 import boto3
 
@@ -96,9 +97,9 @@ def push_to_queue(slots):
         )
     logger.info(f'Response from message queue = {response}')
 
-def validate_dining_parameters(location, cuisine, dining_date, dining_time, num_people, ph_no):
+def validate_dining_parameters(location, cuisine, dining_date, dining_time, num_people, email):
     locations = ['manhattan']
-    cuisines = ['chinese', 'indian', 'italian']
+    cuisines = ['chinese', 'indian', 'italian', 'mexican', 'thai']
     if location is not None and location.lower() not in locations:
         return build_validation_result(False,
                                       'Location',
@@ -109,33 +110,35 @@ def validate_dining_parameters(location, cuisine, dining_date, dining_time, num_
                                       f"We don't offer suggestions for {cuisine} yet. Please try another cuisine.")
     if num_people is not None:
         num_people = int(num_people)
-        if num_people < 0 or num_people > 10:
+        if num_people <= 0 or num_people > 10:
             return build_validation_result(False,
                                       'NumberOfPeople',
                                       f"The number of people should be between 0 and 10 (inclusive)")
     if dining_date is not None:
         if not isvalid_date(dining_date):
-            return build_validation_result(False, 'DiningDate', 'Please provide a valid date')
+            return build_validation_result(False, 'Date', 'Please provide a valid date')
         elif datetime.datetime.strptime(dining_date, '%Y-%m-%d').date() <= datetime.date.today():
-            return build_validation_result(False, 'DiningDate', 'Date must be >= tomorrow')
+            return build_validation_result(False, 'Date', 'Date must be >= tomorrow')
             
     if dining_time is not None:
         if len(dining_time) != 5:
-            return build_validation_result(False, 'DiningTime', 'Please provide a valid time')
+            return build_validation_result(False, 'Time', 'Please provide a valid time')
 
         hour, minute = dining_time.split(':')
         hour = parse_int(hour)
         minute = parse_int(minute)
         if math.isnan(hour) or math.isnan(minute):
-            return build_validation_result(False, 'DiningTime', 'Please provide a valid time')
+            return build_validation_result(False, 'Time', 'Please provide a valid time')
       
-    if ph_no is not None:
-        if len(ph_no) != 10 or not ph_no.isnumeric():
-            return build_validation_result(False, 'PhoneNumber', 'Please provide a valid 10 digit Phone numer without special characters')
-    #TODO get email
-    # email = ''
-    # if email is not None:
-    #     if len(email)
+    # if ph_no is not None:
+    #     if len(ph_no) != 10 or not ph_no.isnumeric():
+    #         return build_validation_result(False, 'PhoneNumber', 'Please provide a valid 10 digit Phone numer without special characters')
+    
+    email_regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
+
+    if email is not None:
+        if not email_regex.match(email):
+            return build_validation_result(False, 'Time', 'Please provide a valid email')
 
     return build_validation_result(True, None, None)
 
@@ -148,7 +151,8 @@ def dining_suggestions(intent_request):
     dining_date = slots["Date"]
     dining_time = slots["Time"]
     num_people = slots["NumberOfPeople"]
-    ph_no = slots["PhoneNumber"]
+    #ph_no = slots["PhoneNumber"]
+    email = slots["Email"]
     
     source = intent_request['invocationSource']
     
@@ -157,7 +161,7 @@ def dining_suggestions(intent_request):
         # Validate
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
 
-        validation_result = validate_dining_parameters(location, cuisine, dining_date, dining_time, num_people, ph_no)
+        validation_result = validate_dining_parameters(location, cuisine, dining_date, dining_time, num_people, email)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
             return elicit_slot(intent_request['sessionAttributes'],
@@ -178,7 +182,7 @@ def dining_suggestions(intent_request):
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {'contentType': 'PlainText',
-                  'content': 'I will send my suggestions to the phone number you provided shortly'})
+                  'content': 'I will send my suggestions to the email address you provided shortly'})
 
 def greet(intent_request):
     bot_message = 'Hi there, how can I help?'
